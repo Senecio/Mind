@@ -1,0 +1,60 @@
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Mind</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" >
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="fullscreen" content="true"/>
+    <meta name="screen-orientation" content="portrait"/>    
+    <meta name="x5-fullscreen" content="true"/>
+    <meta name="360-fullscreen" content="true"/>
+    <meta name="browsermode" content="application">
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="Shortcut Icon" href="favicon.ico" type="image/x-icon" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+        body{
+            background-image: url(images/banner.jpg);
+        }
+    </style>
+
+    <script src="./main.js"></script>
+    <script src="./WebGLRenderer.js"></script>
+    <script>
+
+    function Start()
+    {   
+        var requestAnimFrame = (function() {
+        return window.requestAnimationFrame ||
+             window.webkitRequestAnimationFrame ||
+             window.mozRequestAnimationFrame ||
+             window.oRequestAnimationFrame ||
+             window.msRequestAnimationFrame ||
+             function(/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
+               window.setTimeout(callback, 1000/60);
+             };
+        })();
+                
+        renderer = new WebGLRenderer(document.getElementById("GameCanvas"));
+        game.onInit();
+        
+        (function step() {
+            game.onFrame(0);
+            requestAnimFrame(step);
+        }());
+                
+    }
+    </script>
+</head>
+<body onload="Start()">
+    <div id="GameContent" style="width:800px; margin:0 auto; display:block;">
+    <canvas id='GameCanvas' width="800px" height="600px" style="background-color: #000;position:absolute;top:0px;" oncontextmenu="return false">
+        <p>Can't load HTML 5 canvas: is your browser up to date?</p>
+    </canvas>
+    </div>
+</body>
+</html>

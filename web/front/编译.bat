@@ -1,0 +1,1 @@
+tsc WebGLrenderer.ts & tsc -outFile main.js main.ts
