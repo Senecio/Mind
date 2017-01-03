@@ -40,6 +40,10 @@
         })();
                 
         renderer = new WebGLRenderer(document.getElementById("GameCanvas"));
+        input =  new Mind.Input();
+        document.addEventListener("keydown",    function (input) { return function(event) { input.OnKeyDown(input.KeyboardEventCodeToScan(event)); }; }(input), false);
+        document.addEventListener("keyup",      function (input) { return function(event) { input.OnKeyUp(input.KeyboardEventCodeToScan(event)); }; }(input), false);
+        
         game.onInit();
         
         (function step() {

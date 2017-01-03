@@ -242,6 +242,8 @@ export interface IShader {
     SetMatrix3x3(name : string, array : ArrayBuffer) : boolean;
     SetMatrix4x4(name : string, array : ArrayBuffer) : boolean;
     SetSampler(name : string, index : number);
+    OnBegin() : void;
+    OnEnd() : void;
 }
 
 export interface IRenderer {
