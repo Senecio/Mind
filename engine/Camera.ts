@@ -44,11 +44,26 @@ export class Camera {
         if (this._updateViewByAngle || this._needUpdateView) {
             if (this._updateViewByAngle) {
                 var q = new Quaternion(); 
-                q.FromTaitBryanAngles(this._roll, this._pitch, this._roll);
+                q.FromTaitBryanAngles(this._roll, this._pitch, this._yaw);
 
                 this._up.Copy(q.GetColumn1());
                 this._forward.Copy(q.GetColumn2());
                 this._updateViewByAngle = false;
+            }
+            else {
+                let mat = new Matrix();
+                mat.SetColumn3(0, this.GetRight());
+                mat.SetColumn3(1, this._up);
+                mat.SetColumn3(2, this._forward);
+
+                let q = new Quaternion();
+                q.FromMatrix(mat);
+                let a = q.ToTaitBryanAngles();
+                this._roll = a[0];
+                this._pitch = a[1];
+                this._yaw = a[2];
+                //GameLog(this.GetRight(), this._up, this._forward);
+                //GameLog(a[0], a[1], a[2]);
             }
             
             let at = this._position.Add(this._forward);

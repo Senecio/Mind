@@ -38,12 +38,16 @@
                window.setTimeout(callback, 1000/60);
              };
         })();
-                
-        renderer = new WebGLRenderer(document.getElementById("GameCanvas"));
+        
+        var canvas = document.getElementById("GameCanvas");
+        renderer = new WebGLRenderer(canvas);
         input =  new Mind.Input();
         document.addEventListener("keydown",    function (input) { return function(event) { input.OnKeyDown(input.KeyboardEventCodeToScan(event)); }; }(input), false);
         document.addEventListener("keyup",      function (input) { return function(event) { input.OnKeyUp(input.KeyboardEventCodeToScan(event)); }; }(input), false);
-        
+        canvas.addEventListener("mousemove",  function (input) { return function(event) { event.preventDefault(); input.OnMouseMove(event.clientX, event.clientY); }; }(input), false);
+        canvas.addEventListener("mousedown",  function (input) { return function(event) { event.preventDefault(); input.OnMouseDown(input.MouseEventToMouseButton(event), event.clientX, event.clientY); }; }(input), false);
+        canvas.addEventListener("mouseup",    function (input) { return function(event) { event.preventDefault(); input.OnMouseUp(input.MouseEventToMouseButton(event), event.clientX, event.clientY); }; }(input), false);
+    
         game.onInit();
         
         (function step() {

@@ -4,6 +4,10 @@ export class Input {
     
     _keysDown : Object = {};
     
+    constructor() {
+    
+    }
+    
     OnKeyDown(keyscan : Input.Scan) {
         this._keysDown[keyscan] = true;
     }
@@ -13,11 +17,10 @@ export class Input {
     }
     
     IsKeyDown(keyscan : Input.Scan) {
-        if (typeof this._keysDown[keyscan] === 'undefined') {
+        if (typeof this._keysDown[keyscan] === 'undefined')
             return false;
-        }else {
-            return this._keysDown[keyscan];
-        }
+
+        return this._keysDown[keyscan];
     }
     
     KeyboardEventCodeToScan(event : KeyboardEvent) : Input.Scan {
@@ -111,12 +114,50 @@ export class Input {
             case 89 : return Input.Scan.Y;          // "y",
             case 90 : return Input.Scan.Z;          // "z",
         }
+        return Input.Scan.None;
+    }
+    
+    _mouseButtons : Object = {};
+    _mousePositionX : number = 0;
+    _mousePositionY : number = 0;
+    
+    OnMouseMove(x : number, y : number) {
+        this._mousePositionX = x;
+        this._mousePositionY = y;
+    }
+    
+    OnMouseDown(button : Input.MouseButton, x : number, y : number) {
+        this._mouseButtons[button] = true;
+        this._mousePositionX = x;
+        this._mousePositionY = y;
+    }
+    
+    OnMouseUp(button : Input.MouseButton, x : number, y : number) {
+        this._mouseButtons[button] = false;
+        this._mousePositionX = x;
+        this._mousePositionY = y;
+    }
+    
+    IsMouseDown(button : Input.MouseButton) {
+        return this._mouseButtons[button];
+    }
+    
+    GetMousePosition() {
+        return [this._mousePositionX, this._mousePositionY];
+    }
+    
+    MouseEventToMouseButton(event : MouseEvent) {
+        if (event.button === 0) return Input.MouseButton.Left;
+        else if (event.button === 1) return Input.MouseButton.Middle;
+        else if (event.button === 2) return Input.MouseButton.Right;
+        else return Input.MouseButton.None;
     }
 }
 
 export module Input {
     export enum Scan
     {
+        None            =0,
         Escape          =0x01,
         One             =0x02,
         Two             =0x03,
@@ -262,6 +303,13 @@ export module Input {
         MyComputer      =0xEB,    /* My Computer */
         Mail            =0xEC,    /* Mail */
         MediaSelect     =0xED     /* Media Select */
+    }
+    
+    export enum MouseButton {
+        None,
+        Left,
+        Middle,
+        Right
     }
 }
 

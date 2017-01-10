@@ -20,9 +20,9 @@ game.onInit = function()
     let vb = renderer.CreateVertexBuffer(vbDecl, Mind.VertexBuffer.Usage.Static);
     let buffer = new ArrayBuffer(3*4*7);
     let view = new Float32Array(buffer);
-    view.set([ 0.0,  1.0, 0.0, 1.0,1,0,0,//上顶点
-              -1.0, -1.0, 0.0, 1.0,0,1,0,//左顶点
-               1.0,  0.0, 0.0, 1.0,0,0,1]//右顶点
+    view.set([ 0.0,  100.0, 0.0, 1.0,1,0,0,//上顶点
+              -100.0, -100.0, 0.0, 1.0,0,1,0,//左顶点
+               100.0,  0.0, 0.0, 1.0,0,0,1]//右顶点
              ,0);
         
     vb.SetData(buffer);
@@ -42,7 +42,7 @@ game.onInit = function()
     
     shader.OnBegin = function () : void {
         //shader.SetMatrix4x4("MVPMatrix", (new Mind.Matrix()).m);
-        shader.SetMatrix4x4("MVPMatrix", (camera.GetProj().Multiply(camera.GetView())).m);
+        shader.SetMatrix4x4("MVPMatrix", (camera.GetProj().Multiply(camera.GetView())).Transpose().m);
     }
     
     this.shader = shader;
@@ -50,10 +50,11 @@ game.onInit = function()
 
 game.onFrame = function()
 {
+    var Input = Mind.Input;
     let camera = this.camera;
-    if (input.IsKeyDown(Mind.Input.Scan.W) || input.IsKeyDown(Mind.Input.Scan.S)) {
+    if (input.IsKeyDown(Input.Scan.W) || input.IsKeyDown(Input.Scan.S)) {
         let moveSpeed;
-        if (input.IsKeyDown(Mind.Input.Scan.W))
+        if (input.IsKeyDown(Input.Scan.W))
             moveSpeed = 1.5;
         else
             moveSpeed = -1.5;
@@ -63,12 +64,12 @@ game.onFrame = function()
         forward.MulSelf(moveSpeed);
         pos.AddSelf(forward);
         camera.SetPosition(pos);
-        GameLog(pos.x, pos.y, pos.z);
+        //GameLog(pos.x, pos.y, pos.z);
     }
     
-    if (input.IsKeyDown(Mind.Input.Scan.A) || input.IsKeyDown(Mind.Input.Scan.D)) {
+    if (input.IsKeyDown(Input.Scan.A) || input.IsKeyDown(Input.Scan.D)) {
         let moveSpeed;
-        if (input.IsKeyDown(Mind.Input.Scan.A))
+        if (input.IsKeyDown(Input.Scan.A))
             moveSpeed = 1.5;
         else
             moveSpeed = -1.5;
@@ -78,7 +79,37 @@ game.onFrame = function()
         right.MulSelf(moveSpeed);
         pos.AddSelf(right);
         camera.SetPosition(pos);
-        GameLog(pos.x, pos.y, pos.z);
+        //GameLog(pos.x, pos.y, pos.z);
+    }
+    
+    if (input.IsMouseDown(Input.MouseButton.Right)) {
+        if (typeof this.oldMX === 'undefined') {
+            let p = input.GetMousePosition();
+            this.oldMX = p[0];
+            this.oldMY = p[1];
+        } 
+        let p = input.GetMousePosition();
+        this.dx = p[0] - this.oldMX;
+        this.dy = p[1] - this.oldMY;
+
+        let op = camera.GetPitch();
+        let or = camera.GetRoll();
+        
+        GameLog(op, or, camera.GetYaw());
+        
+        op += this.dx * 0.1;
+        or += this.dy * 0.1;
+        
+        or = Mind.Clamp(-90, 90, or);
+       
+        camera.SetPitch(op%360);
+        camera.SetRoll(or);
+        
+        this.oldMX = p[0];
+        this.oldMY = p[1];
+    }else {
+        this.oldMX = undefined;
+        this.oldMY = undefined;
     }
     
     this.camera.Update();

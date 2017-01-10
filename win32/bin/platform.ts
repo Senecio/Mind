@@ -5,11 +5,8 @@
 declare var game: Game;
 
 var logger = new Duktape.Logger();  // or new Duktape.Logger('logger name')
-var GameLog = function(message?: any, ...optionalParams: any[]) {
-    if (message)
-        logger.info(message);
-    else
-        logger.info.apply(logger, optionalParams);
+var GameLog = function(...optionalParams: any[]) {
+    logger.info.apply(logger, optionalParams);
 }
 
 Duktape.modSearch = function (id, require, exports, module) {

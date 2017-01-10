@@ -16,6 +16,14 @@ namespace Mind {
 export const TWO_PI = Math.PI * 2;
 export const PI = Math.PI;
 export const HALF_PI = Math.PI * 0.5;
+export const EPSILON = 0.00001;
+
+export function FloatEqual(a : number, b : number, deviation? : number) : boolean
+{
+    deviation = (typeof deviation === 'undefined') ? EPSILON : deviation
+    if (Math.abs(a - b) < deviation) return true;
+    return false;
+}
 
 // 角度到弧度
 export function DegreesToRadians(degrees : number) : number
@@ -27,6 +35,34 @@ export function DegreesToRadians(degrees : number) : number
 export function RadiansToDegrees(radians : number) : number
 {
     return radians / (Mind.PI/180.0);
+}
+
+// 映射某角度在-180和180度之间
+export function Warp180(degrees : number) {
+    degrees += 180;
+    degrees -= Math.floor(degrees / 360.0) * 360;
+    degrees -= 180;
+    return degrees;
+}
+
+// 映射某弧度在-PI和PI弧之间
+export function WarpPI(radians : number) {
+    radians += Mind.PI;
+    radians -= Math.floor(radians / TWO_PI) * TWO_PI;
+    radians -= Mind.PI;
+    return radians;
+}
+
+export function Clamp(x : number, a : number, b : number) : number 
+{
+    if (a > b) {
+        let t = a;
+        a = b;
+        b = t;
+    }
+    if (x < a) return a;
+    if (x > b) return b;
+    return x;
 }
 
 export class Rect {
@@ -175,6 +211,10 @@ export class Matrix {
         }
     }
     
+    Copy(other : Matrix) {
+        this.m = other.m.slice();
+    }
+    
     // 单位化
     Identity () {
         for (let i = 0; i < 16; ++i)
@@ -187,8 +227,28 @@ export class Matrix {
         return this;
     }
     
+    // 设置列
+    SetColumn3(index : number, vector : Vec3) {
+        if (index < 4) {
+            let mat = this.m;
+            mat[index] = vector.x;
+            mat[4+index] = vector.y;
+            mat[8+index] = vector.z;
+        }
+    }
+    
+    // 取得列
+    GetColumn3(index : number) {
+        if (index < 4) {
+            let mat = this.m;
+            return new Vec3(mat[index], mat[4+index], mat[8+index]);
+        }
+
+        return null;
+    }
+    
     // 矩阵转置
-    Transpose(mat4x4)
+    Transpose()
     {
         let newMat = new Matrix(this);
         let mat1 = newMat.m, mat2 = this.m;
@@ -249,6 +309,7 @@ export class Matrix {
         return this;
     }
     
+    // 角度为正时是以顺时针旋转
     RotationX(angle : number)
     {
         let rad = DegreesToRadians(angle);
@@ -353,7 +414,7 @@ export class Quaternion {
     constructor(other : Quaternion)
     constructor(xOrQuat? : number | Quaternion, y? : number, z? : number, w? : number) {
         if (typeof xOrQuat === 'undefined' ) {
-            this.Unitization();
+            this.Identity();
         }
         else if (typeof xOrQuat === 'number') {
             let m = this.m;
@@ -383,7 +444,7 @@ export class Quaternion {
         m1[3] = m2[3];
     }
     
-    Unitization() {
+    Identity() {
         let m = this.m;
         m[0] = 0;
         m[1] = 0;
@@ -470,48 +531,45 @@ export class Quaternion {
     
     // 通过Tait Bryan Angles转换
     // Tait–Bryan angles
-    // Roll – {\displaystyle \phi } \phi : rotation about the X-axis. Range(-PI, PI)
-    // Pitch – {\displaystyle \theta } \theta : rotation about the Y-axis. Range(-PI/2, PI/2)
+    // Roll – {\displaystyle \phi } \phi : rotation about the X-axis. Range(-PI/2, PI/2)
+    // Pitch – {\displaystyle \theta } \theta : rotation about the Y-axis. Range(-PI, PI)
     // Yaw – {\displaystyle \psi } \psi : rotation about the Z-axis. Range(-PI, PI)
     // https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
     FromTaitBryanAngles(roll : number, pitch : number, yaw : number) {
-        let angle, sy, cy, sp, cp, sr, cr;
+        // z->x->y
         let q = this.m;
-
-        angle = DegreesToRadians(yaw * 0.5);
-        sy = Math.sin(angle);
-        cy = Math.cos(angle);
-
+        let angle = DegreesToRadians(roll * 0.5);
+        let c1 = Math.cos( angle );
+        let s1 = Math.sin( angle );
+        
         angle = DegreesToRadians(pitch * 0.5);
-        sp = Math.sin(angle);
-        cp = Math.cos(angle);
-
-        angle = DegreesToRadians(roll * 0.5);
-        sr = Math.sin(angle);
-        cr = Math.cos(angle);
-     
-        q[0] = (sr * cp *cy - cr * sp * sy);
-        q[1] = (cr * sp *cy + sr * cp * sy);
-        q[2] = (cr * cp *sy - sr * sp * cy);
-        q[3] = (cr * cp *cy + sr * sp * sy);
+        let c2 = Math.cos( angle );
+        let s2 = Math.sin( angle );
+        
+        angle = DegreesToRadians(yaw * 0.5);
+        let c3 = Math.cos( angle );
+        let s3 = Math.sin( angle );
+        
+        q[0] = s1 * c2 * c3 - c1 * s2 * s3;
+        q[1] = c1 * s2 * c3 + s1 * c2 * s3;
+        q[2] = c1 * c2 * s3 + s1 * s2 * c3;
+        q[3] = c1 * c2 * c3 - s1 * s2 * s3;
     }
     
     // 转换成Tait Bryan Angles
     ToTaitBryanAngles() : Array<number> {
+        // z->x->y
         let q = this.m;
-        let t0 = 2 * (q[3]*q[0] + q[1]*q[2]);
-        let t1 = 1 - 2 * (q[0]*q[0] + q[1]*q[1]);
-        let roll = Math.atan2(t0, t1);
+        let qx = q[0], qy = q[1], qz = q[2], qw = q[3];
+        let sqx = qx * qx;
+        let sqy = qy * qy;
+        let sqz = qz * qz;
+        let sqw = qw * qw;
         
-        let t2 = 2 * (q[3]*q[1] - q[2]*q[0])
-        t2 = t2 > 1 ? 1 : t2;
-        t2 = t2 < -1 ? -1 : t2;
-        let pitch = Math.asin(t2);
-        
-        let t3 = 2 * (q[3]*q[2] + q[0]*q[1]);
-        let t4 = 1 - 2 * (q[1]*q[1] + q[2]*q[2]);
-        let yaw = Math.atan2(t3, t4);
-        
+        let roll = Math.asin(  Mind.Clamp( 2 * ( qx * qw + qy * qz ), - 1, 1 ) );
+        let pitch = Math.atan2( 2 * ( qy * qw - qz * qx ), ( sqw - sqx - sqy + sqz ) );
+        let yaw = Math.atan2( 2 * ( qz * qw - qx * qy ), ( sqw - sqx + sqy - sqz ) );
+       
         return [RadiansToDegrees(roll), RadiansToDegrees(pitch), RadiansToDegrees(yaw)];
     }
     
@@ -696,7 +754,7 @@ export class Quaternion {
                     result.m[2]);
         }
         else {
-
+            // copy form irrlicht.
             // nVidia SDK implementation
             
             let m = this.m;

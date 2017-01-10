@@ -353,6 +353,9 @@ class GLShader implements Mind.IShader {
         }
         return  this.locations[name].location;
     }
+    
+    OnBegin() : void {}
+    OnEnd() : void {}
 }
 
 class GLRenderer implements Mind.IRenderer {
