@@ -349,6 +349,63 @@ export class Matrix {
         return this;
     }
     
+    // 通过欧拉角转换
+    // Roll : rotation about the Z-axis. Range(-PI/2, PI/2)
+    // Pitch : rotation about the X-axis. Range(-PI, PI)
+    // Head : rotation about the Y-axis. Range(-PI, PI)
+    // https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+    FromEulerOrderZXY(roll : number, pitch : number, head : number) {
+        let x = DegreesToRadians(Mind.Clamp(pitch, -90, 90));
+        let y = DegreesToRadians(head), z = DegreesToRadians(roll);
+        let cb = Math.cos( x ), sb = Math.sin( x );
+        let cc = Math.cos( y ), sc = Math.sin( y );
+        let ca = Math.cos( z ), sa = Math.sin( z );
+        
+        let mat = this.m;
+        
+        mat[0] = cc*ca - sc*sb*sa;
+        mat[1] = cc*-sa - sc*sb*ca;
+        mat[2] = -sc*cb;
+
+        mat[4] = cb*sa;
+        mat[5] = cb*ca;
+        mat[6] = -sb;
+
+        mat[8] = sc*ca + cc*sb*sa;
+        mat[9] = sc*-sa+cc*sb*ca;
+        mat[10] = cc*cb;
+     
+        mat[3] = 0;
+        mat[7] = 0;
+        mat[11] = 0;
+
+        mat[12] = 0;
+        mat[13] = 0;
+        mat[14] = 0;
+        mat[15] = 1;
+    }
+    
+    ToEulerOrderZXY() : Array<number> {
+        let mat = this.m;
+        let m11 = mat[0], m12 = mat[1], m13 = mat[2];
+        let m21 = mat[4], m22 = mat[5], m23 = mat[6];
+        let m31 = mat[8], m32 = mat[9], m33 = mat[10];
+        
+        let roll, pitch = Math.asin( Mind.Clamp( -m23, -1, 1 ) ), head;
+
+        if ( Math.abs( m23 ) < 0.99999 ) {
+
+            head = Math.atan2( -m13, m33 );
+            roll = Math.atan2( m21, m22 );
+
+        } else {
+
+            head = 0;
+            roll = Math.atan2( -m12, m11 );
+        }
+        return [RadiansToDegrees(roll), RadiansToDegrees(pitch), RadiansToDegrees(head)];
+    }
+    
     // 观察矩阵
     LookAtRH(eyePos : Vec3, lookAt : Vec3, up : Vec3) {
         let zaxis;
@@ -529,24 +586,23 @@ export class Quaternion {
         return this;
     }
     
-    // 通过Tait Bryan Angles转换
-    // Tait–Bryan angles
-    // Roll – {\displaystyle \phi } \phi : rotation about the X-axis. Range(-PI/2, PI/2)
-    // Pitch – {\displaystyle \theta } \theta : rotation about the Y-axis. Range(-PI, PI)
-    // Yaw – {\displaystyle \psi } \psi : rotation about the Z-axis. Range(-PI, PI)
+    // 通过欧拉角转换
+    // Roll : rotation about the Z-axis.
+    // Pitch : rotation about the X-axis.
+    // Head : rotation about the Y-axis.
     // https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-    FromTaitBryanAngles(roll : number, pitch : number, yaw : number) {
+    FromEulerOrderZXY(roll : number, pitch : number, head : number) {
         // z->x->y
         let q = this.m;
         let angle = DegreesToRadians(roll * 0.5);
         let c1 = Math.cos( angle );
         let s1 = Math.sin( angle );
         
-        angle = DegreesToRadians(pitch * 0.5);
+        angle = DegreesToRadians( Mind.Clamp(pitch, -90, 90) * 0.5);
         let c2 = Math.cos( angle );
         let s2 = Math.sin( angle );
         
-        angle = DegreesToRadians(yaw * 0.5);
+        angle = DegreesToRadians(head * 0.5);
         let c3 = Math.cos( angle );
         let s3 = Math.sin( angle );
         
@@ -556,8 +612,8 @@ export class Quaternion {
         q[3] = c1 * c2 * c3 - s1 * s2 * s3;
     }
     
-    // 转换成Tait Bryan Angles
-    ToTaitBryanAngles() : Array<number> {
+    // 转换成欧拉角
+    ToEulerOrderZXY() : Array<number> {
         // z->x->y
         let q = this.m;
         let qx = q[0], qy = q[1], qz = q[2], qw = q[3];
@@ -568,9 +624,9 @@ export class Quaternion {
         
         let roll = Math.asin(  Mind.Clamp( 2 * ( qx * qw + qy * qz ), - 1, 1 ) );
         let pitch = Math.atan2( 2 * ( qy * qw - qz * qx ), ( sqw - sqx - sqy + sqz ) );
-        let yaw = Math.atan2( 2 * ( qz * qw - qx * qy ), ( sqw - sqx + sqy - sqz ) );
+        let head = Math.atan2( 2 * ( qz * qw - qx * qy ), ( sqw - sqx + sqy - sqz ) );
        
-        return [RadiansToDegrees(roll), RadiansToDegrees(pitch), RadiansToDegrees(yaw)];
+        return [RadiansToDegrees(roll), RadiansToDegrees(pitch), RadiansToDegrees(head)];
     }
     
     // 通过矩阵转换
@@ -644,7 +700,7 @@ export class Quaternion {
         mat4x4[0] = 1.0 - s*(y*y + z*z);    mat4x4[1] = s*(x*y - w*z);          mat4x4[2] = s*(w*y + x*z);         mat4x4[3] = 0.0;
         mat4x4[4] = s*(x*y + w*z),          mat4x4[5] = 1.0 - s*(x*x + z*z);    mat4x4[6] = s*(y*z - w*x);         mat4x4[7] = 0.0;
         mat4x4[8] = s*(x*z - w*y);          mat4x4[9] = s*(y*z + w*x);          mat4x4[10] = 1.0 - s*(x*x + y*y);  mat4x4[11] = 0.0;
-        mat4x4[12] = 0.0;                   mat4x4[13] = 0.0;                   mat4x4[14] = 0.0;                   mat4x4[15] = 1.0;
+        mat4x4[12] = 0.0;                   mat4x4[13] = 0.0;                   mat4x4[14] = 0.0;                  mat4x4[15] = 1.0;
     
         return newMat;
     }

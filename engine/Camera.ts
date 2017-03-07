@@ -8,19 +8,19 @@ export class Camera {
     private _updateViewByAngle : boolean;
     private _needUpdateProj : boolean;
     
-    private _position : Vec3 = Vec3.Zero;
-    private _forward  : Vec3 = Vec3.Forward;
-    private _up       : Vec3 = Vec3.Up;
+    private _position : Vec3 = new Vec3(Vec3.Zero);
+    private _forward  : Vec3 = new Vec3(Vec3.Forward);
+    private _up       : Vec3 = new Vec3(Vec3.Up);
     
     private _roll     : number = 0;
     private _pitch    : number = 0;
-    private _yaw      : number = 0;
+    private _head     : number = 0;
     
     private _viewMat  : Matrix = new Matrix();
     private _projMat  : Matrix = new Matrix();
     
     private _fov_y : number = 90.0;
-    private _aspect : number = 4.0 / 3.0;;
+    private _aspect : number = 4.0 / 3.0;
     private _zNear : number = 0.1;
     private _zFar : number = 1000;
     
@@ -32,7 +32,7 @@ export class Camera {
 
         this._position.Set(0.0, 100.0, 100.0);
 
-        this._forward.Copy(this._position.Mul(-1));
+        this._forward.Set(0.0, -100.0, -100.0);
         this._forward.NormalizeSelf();
         
         this.SetForward(this._forward);
@@ -43,11 +43,11 @@ export class Camera {
     private _UpdateView() {
         if (this._updateViewByAngle || this._needUpdateView) {
             if (this._updateViewByAngle) {
-                var q = new Quaternion(); 
-                q.FromTaitBryanAngles(this._roll, this._pitch, this._yaw);
-
-                this._up.Copy(q.GetColumn1());
-                this._forward.Copy(q.GetColumn2());
+                let mat = new Matrix();
+                mat.FromEulerOrderZXY(this._roll, this._pitch, this._head);
+                this._up.Copy(mat.GetColumn3(1));
+                this._forward.Copy(mat.GetColumn3(2));
+                GameLog(this._roll, this._pitch, this._head);
                 this._updateViewByAngle = false;
             }
             else {
@@ -56,18 +56,15 @@ export class Camera {
                 mat.SetColumn3(1, this._up);
                 mat.SetColumn3(2, this._forward);
 
-                let q = new Quaternion();
-                q.FromMatrix(mat);
-                let a = q.ToTaitBryanAngles();
+                let a = mat.ToEulerOrderZXY();
                 this._roll = a[0];
                 this._pitch = a[1];
-                this._yaw = a[2];
-                //GameLog(this.GetRight(), this._up, this._forward);
-                //GameLog(a[0], a[1], a[2]);
+                this._head = a[2];
+                GameLog(this._roll, this._pitch, this._head);
             }
             
             let at = this._position.Add(this._forward);
-            this._viewMat.LookAtRH(this._position, at, this._up);
+            this._viewMat.LookAtRH(this._position, at, Vec3.Up);
             this._needUpdateView = false;
         }
     }
@@ -179,6 +176,7 @@ export class Camera {
     }
     
     SetPitch(pitch : number) {
+        pitch = Mind.Clamp(pitch, -89.5, 89.5);
         this._pitch = pitch;
         
         this._needUpdateView = true;
@@ -189,23 +187,15 @@ export class Camera {
         return this._pitch;
     }
     
-    SetYaw(yaw : number) {
-        this._yaw = yaw;
+    SetHead(head : number) {
+        this._head = head;
 
         this._needUpdateView = true;
         this._updateViewByAngle = true;
     }
     
-    GetYaw() : number {
-        return this._yaw;
-    }
-
-    SetRotation(rotation : Quaternion) {
-
-    }
-    
-    GetRotation() : Quaternion {
-        return null;
+    GetHead() : number {
+        return this._head;
     }
     
     SetProjection(fov_y : number, aspect : number, zNear : number, zFar : number){
@@ -224,10 +214,18 @@ export class Camera {
         this._needUpdateProj = true;
     }
     
+    GetFov() {
+        return this._fov_y;
+    }
+    
     SetAspect(aspect : number) {
         this._aspect    = aspect;
     
         this._needUpdateProj = true;
+    }
+    
+    GetAspect() {
+        return this._aspect;
     }
     
     SetClipNear(zNear : number) {
@@ -236,10 +234,18 @@ export class Camera {
         this._needUpdateProj = true;
     }
     
+    GetClipNear() {
+        return this._zNear;
+    }
+    
     SetClipFar(zFar : number) {
         this._zFar      = zFar;
     
         this._needUpdateProj = true;
+    }
+    
+    GetClipFar() {
+        return this._zFar;
     }
     
     GetView() : Matrix { 
