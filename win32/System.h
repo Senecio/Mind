@@ -9,6 +9,21 @@ class  WindowsSystem;
 class Window
 {
 public:
+    class IKeyboardListener
+    {
+    public: 
+        virtual void OnKeyDown(Key::Scan scan) = 0;
+        virtual void OnKeyUp(Key::Scan scan) = 0;
+    };
+
+    class IMouseListener
+    {
+    public:
+        virtual void OnMove(int x, int y) = 0;
+        virtual void OnButtonDown(int id, int x, int y) = 0;
+        virtual void OnButtonUp(int id, int x, int y) = 0;
+    };
+
     Window(WindowsSystem* system);
     ~Window();
 
@@ -20,6 +35,9 @@ public:
 
     WindowsSystem*  _system;
     HWND            _hwnd;
+
+    IKeyboardListener*  _keyboardListener;
+    IMouseListener*     _mouseListener;
 };
 
 class WinFile
@@ -41,6 +59,34 @@ public:
 
     WindowsSystem*  _system;
     FILE* _fp;
+};
+
+
+class WinThread 
+{
+    static uint32 __stdcall ThreadFunction(void *pV);
+public:
+
+    WinThread(void);
+    virtual ~WinThread(void);
+
+    DWORD           Resume();
+
+    DWORD           Suspend();
+
+    bool            Wait();
+
+    bool            Wait(uint32 timeoutMillis);
+
+    void            Terminate(uint32 timeoutMillis);
+
+    HANDLE          GetHandle() { return _handle; }
+protected:
+    virtual int     Run() = 0;
+private:
+    HANDLE          _handle;
+    HANDLE          _closeEvent;
+    uint32          _timeoutMillisTerminate;
 };
 
 class WindowsSystem

@@ -47,7 +47,7 @@ export class Camera {
                 mat.FromEulerOrderZXY(this._roll, this._pitch, this._head);
                 this._up.Copy(mat.GetColumn3(1));
                 this._forward.Copy(mat.GetColumn3(2));
-                GameLog(this._roll, this._pitch, this._head);
+                //GameLog(this._roll, this._pitch, this._head);
                 this._updateViewByAngle = false;
             }
             else {

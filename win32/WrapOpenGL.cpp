@@ -4,6 +4,22 @@
 #include <gl/wglew.h>
 #include <cassert>
 
+
+#if defined(_DEBUG) && defined(_CHECK_GL_ERROR)
+    #define GL_ASSERT(expression) do \
+    { \
+    expression; \
+    GLenum error = glGetError(); \
+    if(error != GL_NO_ERROR) \
+        { \
+        printf("call opengl's function has error. file(%s),func(%s),line(%d),error(%x)\n", __FILE__, __FUNCTION__, __LINE__, error); \
+        assert(0); \
+        } \
+    }while(0)
+#else
+    #define GL_ASSERT(expression) expression
+#endif
+
 #define ErrorParameter  "error parameter type."
 #define ErrorSyntax     "error syntax use."
 
@@ -83,7 +99,7 @@ duk_ret_t GL_prototype_ClearColor(duk_context* ctx)
         DukGetFloatFormStack(ctx, 2, b) &&
         DukGetFloatFormStack(ctx, 3, a))
     {
-        glClearColor((GLclampf)r, (GLclampf)g, (GLclampf)b, (GLclampf)a);
+        GL_ASSERT( glClearColor((GLclampf)r, (GLclampf)g, (GLclampf)b, (GLclampf)a) );
     }
     else
     {
@@ -105,7 +121,7 @@ duk_ret_t GL_prototype_ClearDepth(duk_context* ctx)
     float depth;
     if (DukGetFloatFormStack(ctx, 0, depth))
     {
-        glClearDepth((GLclampf)depth);
+        GL_ASSERT( glClearDepth((GLclampf)depth) );
     }
     else
     {
@@ -127,7 +143,7 @@ duk_ret_t GL_prototype_Clear(duk_context* ctx)
     unsigned int bitmask;
     if (DukGetUIntFormStack(ctx, 0, bitmask))
     {
-        glClear((GLbitfield)bitmask);
+        GL_ASSERT( glClear((GLbitfield)bitmask) );
     }
     else
     {
@@ -150,7 +166,7 @@ duk_ret_t GL_prototype_GenBuffers(duk_context* ctx)
     if (DukGetUIntFormStack(ctx, 0, count))
     {
         GLuint* ids = new GLuint(count);
-        glGenBuffers(count, ids);
+        GL_ASSERT( glGenBuffers(count, ids) );
         duk_idx_t arr_idx = duk_push_array(ctx);
         for (unsigned int i = 0; i < count; ++i)
         {
@@ -210,7 +226,7 @@ duk_ret_t GL_prototype_CreateBuffer(duk_context* ctx)
 {
     int n = duk_get_top(ctx);  /* #args */
     unsigned int id;
-    glGenBuffers(1, &id);
+    GL_ASSERT( glGenBuffers(1, &id) );
     duk_push_uint(ctx, id);
     assert( duk_get_top(ctx) == n + 1 );
 
@@ -229,7 +245,7 @@ duk_ret_t GL_prototype_BindBuffer(duk_context* ctx)
     if (DukGetUIntFormStack(ctx, 0, target) && 
         DukGetUIntFormStack(ctx, 1, id))
     {
-        glBindBuffer(target, id);
+        GL_ASSERT( glBindBuffer(target, id) );
     }
     else
     {
@@ -256,7 +272,7 @@ duk_ret_t GL_prototype_BufferData(duk_context* ctx)
         duk_size_t len;
         float *buf;
         buf = (float *)duk_get_buffer_data(ctx, 1, &len);
-        glBufferData(target, len, (void*)buf, usage);
+        GL_ASSERT( glBufferData(target, len, (void*)buf, usage) );
     }
     else
     {
@@ -278,7 +294,8 @@ duk_ret_t GL_prototype_CreateShader(duk_context* ctx)
     unsigned int type;
     if (DukGetUIntFormStack(ctx, 0, type))
     {
-        GLuint id = glCreateShader(type);
+        GLuint id;
+        GL_ASSERT( id = glCreateShader(type) );
         duk_push_uint(ctx, id);
     }
     else
@@ -302,7 +319,7 @@ duk_ret_t GL_prototype_DeleteShader(duk_context* ctx)
     unsigned int sahderId;
     if (DukGetUIntFormStack(ctx, 0, sahderId))
     {
-        glDeleteShader(sahderId);
+        GL_ASSERT( glDeleteShader(sahderId) );
     }
     else
     {
@@ -327,7 +344,7 @@ duk_ret_t GL_prototype_ShaderSource(duk_context* ctx)
     if (DukGetUIntFormStack(ctx, 0, shaderId) &&
         DukGetStringFormStack(ctx, 1, &shaderText))
     {
-        glShaderSource(shaderId, 1, &shaderText, 0);
+        GL_ASSERT( glShaderSource(shaderId, 1, &shaderText, 0) );
     }
     else
     {
@@ -349,7 +366,7 @@ duk_ret_t GL_prototype_CompileShader(duk_context* ctx)
     unsigned int shaderId;
     if (DukGetUIntFormStack(ctx, 0, shaderId))
     {
-         glCompileShader(shaderId);
+         GL_ASSERT( glCompileShader(shaderId) );
     }
     else
     {
@@ -373,7 +390,7 @@ duk_ret_t GL_prototype_GetShaderiv(duk_context* ctx)
         DukGetUIntFormStack(ctx, 1, name))
     {
         GLint result;
-        glGetShaderiv(shaderId, name, &result);
+        GL_ASSERT( glGetShaderiv(shaderId, name, &result) );
         duk_push_int(ctx, result);
     }
     else
@@ -398,9 +415,9 @@ duk_ret_t GL_prototype_GetShaderInfoLog(duk_context* ctx)
     if (DukGetUIntFormStack(ctx, 0, shaderId))
     {
         GLint length;
-        glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &length);
+        GL_ASSERT( glGetShaderiv(shaderId, GL_INFO_LOG_LENGTH, &length) );
         char* errorInfo = new char[length + 1];
-        glGetShaderInfoLog(shaderId, length, 0, errorInfo);
+        GL_ASSERT( glGetShaderInfoLog(shaderId, length, 0, errorInfo) );
         duk_push_string(ctx, errorInfo);
         delete [] errorInfo;
     }
@@ -417,7 +434,8 @@ duk_ret_t GL_prototype_GetShaderInfoLog(duk_context* ctx)
 duk_ret_t GL_prototype_CreateProgram(duk_context* ctx)
 {
     int n = duk_get_top(ctx);  /* #args */
-    unsigned int id = glCreateProgram();
+    unsigned int id;
+    GL_ASSERT( id = glCreateProgram() );
     duk_push_uint(ctx, id);
     assert( duk_get_top(ctx) == n + 1 );
     return 1;
@@ -435,7 +453,7 @@ duk_ret_t GL_prototype_AttachShader(duk_context* ctx)
     if (DukGetUIntFormStack(ctx, 0, programId) &&
         DukGetUIntFormStack(ctx, 1, shaderId))
     {
-        glAttachShader(programId, shaderId);
+        GL_ASSERT( glAttachShader(programId, shaderId) );
     }
     else
     {
@@ -457,7 +475,7 @@ duk_ret_t GL_prototype_LinkProgram(duk_context* ctx)
     unsigned int programId;
     if (DukGetUIntFormStack(ctx, 0, programId))
     {
-        glLinkProgram(programId);
+        GL_ASSERT( glLinkProgram(programId) );
     }
     else
     {
@@ -481,7 +499,7 @@ duk_ret_t GL_prototype_GetProgramiv(duk_context* ctx)
         DukGetUIntFormStack(ctx, 1, name))
     {
         GLint result;
-        glGetProgramiv(programId, name, &result);
+        GL_ASSERT( glGetProgramiv(programId, name, &result) );
         duk_push_int(ctx, result);
     }
     else
@@ -535,7 +553,35 @@ duk_ret_t GL_prototype_GetAttribLocation(duk_context* ctx)
     if (DukGetUIntFormStack(ctx, 0, programId) &&
         DukGetStringFormStack(ctx, 1, &name))
     {
-        int location = glGetAttribLocation(programId, name);
+        int location;
+        GL_ASSERT( location = glGetAttribLocation(programId, name) );
+        duk_push_int(ctx, location);
+    }
+    else
+    {
+        printf("%s %s\n",__FUNCTION__, ErrorParameter);
+        return 0;
+    }
+
+    assert( duk_get_top(ctx) == n + 1 );
+    return 1;
+}
+
+duk_ret_t GL_prototype_GetUniformLocation(duk_context* ctx)
+{
+    int n = duk_get_top(ctx);  /* #args */
+    if (n != 2){
+        printf("%s %s\n",__FUNCTION__, ErrorSyntax);
+        return 0;
+    }
+
+    unsigned int programId;
+    const char* name;
+    if (DukGetUIntFormStack(ctx, 0, programId) &&
+        DukGetStringFormStack(ctx, 1, &name))
+    {
+        int location;
+        GL_ASSERT( location = glGetUniformLocation(programId, name) );
         duk_push_int(ctx, location);
     }
     else
@@ -559,7 +605,7 @@ duk_ret_t GL_prototype_UseProgram(duk_context* ctx)
     unsigned int programId;
     if (DukGetUIntFormStack(ctx, 0, programId))
     {
-        glUseProgram(programId);
+        GL_ASSERT( glUseProgram(programId) );
     }
     else
     {
@@ -583,7 +629,7 @@ duk_ret_t GL_prototype_Uniform1f(duk_context* ctx)
     if (DukGetIntFormStack(ctx, 0, location) &&
         DukGetFloatFormStack(ctx, 1, x))
     {
-        glUniform1f(location, x);
+        GL_ASSERT( glUniform1f(location, x) );
     }
     else
     {
@@ -604,7 +650,7 @@ duk_ret_t GL_prototype_Uniform1fv(duk_context* ctx)
 
     int location;
     if (DukGetIntFormStack(ctx, 0, location) &&
-        duk_is_buffer(ctx, 1))
+        duk_is_object(ctx, 1))
     {
         duk_get_prop_string(ctx, 1, "length");
         unsigned int length = duk_get_int(ctx, -1);
@@ -614,10 +660,11 @@ duk_ret_t GL_prototype_Uniform1fv(duk_context* ctx)
         for (unsigned int i = 0; i < length; ++i)
         {
             duk_get_prop_index(ctx, 1, i);
-            array[i] = (float)duk_get_number(ctx, i);
+            array[i] = (float)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
         
-        glUniform1fv(location, length, array);
+        GL_ASSERT( glUniform1fv(location, length, array) );
         delete [] array;
     }
     else
@@ -642,7 +689,7 @@ duk_ret_t GL_prototype_Uniform1i(duk_context* ctx)
     if (DukGetIntFormStack(ctx, 0, location) &&
         DukGetIntFormStack(ctx, 1, x))
     {
-        glUniform1i(location, x);
+        GL_ASSERT( glUniform1i(location, x) );
     }
     else
     {
@@ -663,7 +710,7 @@ duk_ret_t GL_prototype_Uniform1iv(duk_context* ctx)
 
     int location;
     if (DukGetIntFormStack(ctx, 0, location) &&
-        duk_is_buffer(ctx, 1))
+        duk_is_object(ctx, 1))
     {
         duk_get_prop_string(ctx, 1, "length");
         unsigned int length = duk_get_int(ctx, -1);
@@ -673,10 +720,11 @@ duk_ret_t GL_prototype_Uniform1iv(duk_context* ctx)
         for (unsigned int i = 0; i < length; ++i)
         {
             duk_get_prop_index(ctx, 1, i);
-            array[i] = (int)duk_get_number(ctx, i);
+            array[i] = (int)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniform1iv(location, length, array);
+        GL_ASSERT( glUniform1iv(location, length, array) );
         delete [] array;
     }
     else
@@ -702,7 +750,7 @@ duk_ret_t GL_prototype_Uniform2f(duk_context* ctx)
         DukGetFloatFormStack(ctx, 1, x) &&
         DukGetFloatFormStack(ctx, 2, y))
     {
-        glUniform2f(location, x, y);
+        GL_ASSERT( glUniform2f(location, x, y) );
     }
     else
     {
@@ -723,7 +771,7 @@ duk_ret_t GL_prototype_Uniform2fv(duk_context* ctx)
 
     int location;
     if (DukGetIntFormStack(ctx, 0, location) &&
-        duk_is_buffer(ctx, 1))
+        duk_is_object(ctx, 1))
     {
         duk_get_prop_string(ctx, 1, "length");
         unsigned int length = duk_get_int(ctx, -1);
@@ -733,10 +781,11 @@ duk_ret_t GL_prototype_Uniform2fv(duk_context* ctx)
         for (unsigned int i = 0; i < length; ++i)
         {
             duk_get_prop_index(ctx, 1, i);
-            array[i] = (float)duk_get_number(ctx, i);
+            array[i] = (float)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniform2fv(location, length/2, array);
+        GL_ASSERT( glUniform2fv(location, length/2, array) );
         delete [] array;
     }
     else
@@ -762,7 +811,7 @@ duk_ret_t GL_prototype_Uniform2i(duk_context* ctx)
         DukGetIntFormStack(ctx, 1, x) &&
         DukGetIntFormStack(ctx, 2, y))
     {
-        glUniform2i(location, x, y);
+        GL_ASSERT( glUniform2i(location, x, y) );
     }
     else
     {
@@ -784,7 +833,7 @@ duk_ret_t GL_prototype_Uniform2iv(duk_context* ctx)
 
     int location;
     if (DukGetIntFormStack(ctx, 0, location) &&
-        duk_is_buffer(ctx, 1))
+        duk_is_object(ctx, 1))
     {
         duk_get_prop_string(ctx, 1, "length");
         unsigned int length = duk_get_int(ctx, -1);
@@ -794,10 +843,11 @@ duk_ret_t GL_prototype_Uniform2iv(duk_context* ctx)
         for (unsigned int i = 0; i < length; ++i)
         {
             duk_get_prop_index(ctx, 1, i);
-            array[i] = (int)duk_get_number(ctx, i);
+            array[i] = (int)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniform2iv(location, length/2, array);
+        GL_ASSERT( glUniform2iv(location, length/2, array) );
         delete [] array;
     }
     else
@@ -825,7 +875,7 @@ duk_ret_t GL_prototype_Uniform3f(duk_context* ctx)
         DukGetFloatFormStack(ctx, 2, y) && 
         DukGetFloatFormStack(ctx, 3, z))
     {
-        glUniform3f(location, x, y, z);
+        GL_ASSERT( glUniform3f(location, x, y, z) );
     }
     else
     {
@@ -846,7 +896,7 @@ duk_ret_t GL_prototype_Uniform3fv(duk_context* ctx)
 
     int location;
     if (DukGetIntFormStack(ctx, 0, location) &&
-        duk_is_buffer(ctx, 1))
+        duk_is_object(ctx, 1))
     {
         duk_get_prop_string(ctx, 1, "length");
         unsigned int length = duk_get_int(ctx, -1);
@@ -856,10 +906,11 @@ duk_ret_t GL_prototype_Uniform3fv(duk_context* ctx)
         for (unsigned int i = 0; i < length; ++i)
         {
             duk_get_prop_index(ctx, 1, i);
-            array[i] = (float)duk_get_number(ctx, i);
+            array[i] = (float)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniform3fv(location, length/3, array);
+        GL_ASSERT( glUniform3fv(location, length/3, array) );
         delete [] array;
     }
     else
@@ -886,7 +937,7 @@ duk_ret_t GL_prototype_Uniform3i(duk_context* ctx)
         DukGetIntFormStack(ctx, 2, y) &&
         DukGetIntFormStack(ctx, 3, z))
     {
-        glUniform3i(location, x, y, z);
+        GL_ASSERT( glUniform3i(location, x, y, z) );
     }
     else
     {
@@ -907,7 +958,7 @@ duk_ret_t GL_prototype_Uniform3iv(duk_context* ctx)
 
     int location;
     if (DukGetIntFormStack(ctx, 0, location) &&
-        duk_is_buffer(ctx, 1))
+        duk_is_object(ctx, 1))
     {
         duk_get_prop_string(ctx, 1, "length");
         unsigned int length = duk_get_int(ctx, -1);
@@ -917,10 +968,11 @@ duk_ret_t GL_prototype_Uniform3iv(duk_context* ctx)
         for (unsigned int i = 0; i < length; ++i)
         {
             duk_get_prop_index(ctx, 1, i);
-            array[i] = (int)duk_get_number(ctx, i);
+            array[i] = (int)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniform3iv(location, length/3, array);
+        GL_ASSERT( glUniform3iv(location, length/3, array) );
         delete [] array;
     }
     else
@@ -948,7 +1000,7 @@ duk_ret_t GL_prototype_Uniform4f(duk_context* ctx)
         DukGetFloatFormStack(ctx, 3, z) &&
         DukGetFloatFormStack(ctx, 4, w))
     {
-        glUniform4f(location, x, y, z, w);
+        GL_ASSERT( glUniform4f(location, x, y, z, w) );
     }
     else
     {
@@ -969,7 +1021,7 @@ duk_ret_t GL_prototype_Uniform4fv(duk_context* ctx)
 
     int location;
     if (DukGetIntFormStack(ctx, 0, location) &&
-        duk_is_buffer(ctx, 1))
+        duk_is_object(ctx, 1))
     {
         duk_get_prop_string(ctx, 1, "length");
         unsigned int length = duk_get_int(ctx, -1);
@@ -979,10 +1031,11 @@ duk_ret_t GL_prototype_Uniform4fv(duk_context* ctx)
         for (unsigned int i = 0; i < length; ++i)
         {
             duk_get_prop_index(ctx, 1, i);
-            array[i] = (float)duk_get_number(ctx, i);
+            array[i] = (float)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniform4fv(location, length/4, array);
+        GL_ASSERT( glUniform4fv(location, length/4, array) );
         delete [] array;
     }
     else
@@ -1010,7 +1063,7 @@ duk_ret_t GL_prototype_Uniform4i(duk_context* ctx)
         DukGetIntFormStack(ctx, 3, z) &&
         DukGetIntFormStack(ctx, 4, w))
     {
-        glUniform4i(location, x, y, z, w);
+        GL_ASSERT( glUniform4i(location, x, y, z, w) );
     }
     else
     {
@@ -1031,7 +1084,7 @@ duk_ret_t GL_prototype_Uniform4iv(duk_context* ctx)
 
     int location;
     if (DukGetIntFormStack(ctx, 0, location) &&
-        duk_is_buffer(ctx, 1))
+        duk_is_object(ctx, 1))
     {
         duk_get_prop_string(ctx, 1, "length");
         unsigned int length = duk_get_int(ctx, -1);
@@ -1041,10 +1094,11 @@ duk_ret_t GL_prototype_Uniform4iv(duk_context* ctx)
         for (unsigned int i = 0; i < length; ++i)
         {
             duk_get_prop_index(ctx, 1, i);
-            array[i] = (int)duk_get_number(ctx, i);
+            array[i] = (int)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniform4iv(location, length/4, array);
+        GL_ASSERT( glUniform4iv(location, length/4, array) );
         delete [] array;
     }
     else
@@ -1068,20 +1122,21 @@ duk_ret_t GL_prototype_UniformMatrix2fv(duk_context* ctx)
     bool transpose;
     if (DukGetIntFormStack(ctx, 0, location) &&
         DukGetBoolFormStack(ctx, 1, transpose) &&
-        duk_is_buffer(ctx, 2))
+        duk_is_object(ctx, 2))
     {
-        duk_get_prop_string(ctx, 1, "length");
+        duk_get_prop_string(ctx, 2, "length");
         unsigned int length = duk_get_int(ctx, -1);
         duk_pop(ctx);
 
         float* array = new float[length];
         for (unsigned int i = 0; i < length; ++i)
         {
-            duk_get_prop_index(ctx, 1, i);
-            array[i] = (float)duk_get_number(ctx, i);
+            duk_get_prop_index(ctx, 2, i);
+            array[i] = (float)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniformMatrix2fv(location, length/4, transpose, array);
+        GL_ASSERT( glUniformMatrix2fv(location, length/4, transpose, array) );
         delete [] array;
     }
     else
@@ -1105,9 +1160,9 @@ duk_ret_t GL_prototype_UniformMatrix3fv(duk_context* ctx)
     bool transpose;
     if (DukGetIntFormStack(ctx, 0, location) &&
         DukGetBoolFormStack(ctx, 1, transpose) &&
-        duk_is_buffer(ctx, 2))
+        duk_is_object(ctx, 2))
     {
-        duk_get_prop_string(ctx, 1, "length");
+        duk_get_prop_string(ctx, 2, "length");
         unsigned int length = duk_get_int(ctx, -1);
         duk_pop(ctx);
 
@@ -1115,10 +1170,11 @@ duk_ret_t GL_prototype_UniformMatrix3fv(duk_context* ctx)
         for (unsigned int i = 0; i < length; ++i)
         {
             duk_get_prop_index(ctx, 1, i);
-            array[i] = (float)duk_get_number(ctx, i);
+            array[i] = (float)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniformMatrix3fv(location, length/9, transpose, array);
+        GL_ASSERT( glUniformMatrix3fv(location, length/9, transpose, array) );
         delete [] array;
     }
     else
@@ -1140,22 +1196,25 @@ duk_ret_t GL_prototype_UniformMatrix4fv(duk_context* ctx)
 
     int location;
     bool transpose;
+    auto type = duk_get_type(ctx, 2);
+    auto a = DUK_BUFOBJ_CREATE_ARRBUF;
     if (DukGetIntFormStack(ctx, 0, location) &&
         DukGetBoolFormStack(ctx, 1, transpose) &&
-        duk_is_buffer(ctx, 2))
+        duk_is_object(ctx, 2))
     {
-        duk_get_prop_string(ctx, 1, "length");
+        duk_get_prop_string(ctx, 2, "length");
         unsigned int length = duk_get_int(ctx, -1);
         duk_pop(ctx);
 
         float* array = new float[length];
         for (unsigned int i = 0; i < length; ++i)
         {
-            duk_get_prop_index(ctx, 1, i);
-            array[i] = (float)duk_get_number(ctx, i);
+            duk_get_prop_index(ctx, 2, i);
+            array[i] = (float)duk_get_number(ctx, -1);
+            duk_pop(ctx);
         }
 
-        glUniformMatrix4fv(location, length/16, transpose, array);
+        GL_ASSERT( glUniformMatrix4fv(location, length/16, transpose, array) );
         delete [] array;
     }
     else
@@ -1178,7 +1237,7 @@ duk_ret_t GL_prototype_EnableVertexAttribArray(duk_context* ctx)
     int location;
     if (DukGetIntFormStack(ctx, 0, location))
     {
-        glEnableVertexAttribArray(location);
+        GL_ASSERT( glEnableVertexAttribArray(location) );
     }
     else
     {
@@ -1200,7 +1259,7 @@ duk_ret_t GL_prototype_DisableVertexAttribArray(duk_context* ctx)
     int location;
     if (DukGetIntFormStack(ctx, 0, location))
     {
-        glDisableVertexAttribArray(location);
+        GL_ASSERT( glDisableVertexAttribArray(location) );
     }
     else
     {
@@ -1229,7 +1288,7 @@ duk_ret_t GL_prototype_VertexAttribPointer(duk_context* ctx)
         DukGetUIntFormStack(ctx, 4, stride) &&
         DukGetUIntFormStack(ctx, 5, offset))
     {
-        glVertexAttribPointer(location, size, dataType, normalized, stride, (void*)offset);
+        GL_ASSERT( glVertexAttribPointer(location, size, dataType, normalized, stride, (void*)offset) );
     }
     else
     {
@@ -1253,7 +1312,7 @@ duk_ret_t GL_prototype_DrawArrays(duk_context* ctx)
         DukGetUIntFormStack(ctx, 1, first) && 
         DukGetUIntFormStack(ctx, 2, count))
     {
-        glDrawArrays(mode, first, count);
+        GL_ASSERT( glDrawArrays(mode, first, count) );
     }
     else
     {
@@ -1277,9 +1336,9 @@ duk_ret_t GL_prototype_DrawElements(duk_context* ctx)
     if (DukGetUIntFormStack(ctx, 0, mode) &&
         DukGetUIntFormStack(ctx, 1, count) && 
         DukGetUIntFormStack(ctx, 2, type) &&
-        DukGetUIntFormStack(ctx, 4, offset))
+        DukGetUIntFormStack(ctx, 3, offset))
     {
-        glDrawElements(mode, count, type, (void*)offset);
+        GL_ASSERT( glDrawElements(mode, count, type, (void*)offset) );
     }
     else
     {
@@ -1321,6 +1380,7 @@ duk_ret_t duk_open_OpenGL(duk_context *ctx)
         { "getProgramParameter", GL_prototype_GetProgramiv, 2},
         { "getProgramInfoLog", GL_prototype_GetProgramInfoLog, 1},
         { "getAttribLocation", GL_prototype_GetAttribLocation, 2},
+        { "getUniformLocation", GL_prototype_GetUniformLocation, 2 },
         { "useProgram", GL_prototype_UseProgram, 1},
         { "uniform1f", GL_prototype_Uniform1f, 2},
         { "uniform1fv", GL_prototype_Uniform1fv, 2},

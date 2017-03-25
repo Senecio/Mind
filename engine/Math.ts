@@ -203,7 +203,7 @@ export class Matrix {
     m : Float32Array;
     constructor(mat?: Matrix) {
         if (mat) {
-            this.m = mat.m.slice();
+            this.Copy(mat);
         }
         else {
             this.m = new Float32Array(16);
@@ -212,7 +212,13 @@ export class Matrix {
     }
     
     Copy(other : Matrix) {
-        this.m = other.m.slice();
+        if (typeof other.m.slice !== 'undefined') {
+            this.m = other.m.slice();
+        } else {
+            this.m = new Float32Array(16);
+            for (let i = 0; i < 16; ++i)
+                this.m[i] = other.m[i];
+        }
     }
     
     // 单位化
@@ -585,7 +591,8 @@ export class Quaternion {
         
         return this;
     }
-    
+    /*
+    // 暂时未推导验证. 如果碰到需求,请先把欧拉角转换成矩阵.然后把矩阵转成四元素
     // 通过欧拉角转换
     // Roll : rotation about the Z-axis.
     // Pitch : rotation about the X-axis.
@@ -612,6 +619,7 @@ export class Quaternion {
         q[3] = c1 * c2 * c3 - s1 * s2 * s3;
     }
     
+    // 暂时未推导验证. 如果碰到需求,请先把四元素转换成矩阵.然后把矩阵转成欧拉角
     // 转换成欧拉角
     ToEulerOrderZXY() : Array<number> {
         // z->x->y
@@ -628,6 +636,7 @@ export class Quaternion {
        
         return [RadiansToDegrees(roll), RadiansToDegrees(pitch), RadiansToDegrees(head)];
     }
+    */
     
     // 通过矩阵转换
     FromMatrix(matrix : Matrix) {

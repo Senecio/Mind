@@ -11,19 +11,19 @@
 #include <windows.h>
 #include <cstdio>
 
-static duk_ret_t ReadFile(duk_context *ctx) {
+static duk_ret_t SyncReadFile(duk_context *ctx) {
     const char *file = duk_to_string(ctx, 0);
     duk_push_string_file(ctx, file);
     return 1;  /* one return value */
 }
+
+static duk_ret_t AsyncReadFile(duk_context *ctx);
 
 DUK_LOCAL void fatal_handler(duk_context *ctx, duk_errcode_t code, const char *msg) {
   fprintf(stderr, "Fatal error: %s [code: %d]", msg, code);
   /* Fatal handler should not return. */
   exit(EXIT_FAILURE);
 }
-
-
 
 static duk_ret_t adder(duk_context *ctx) {
     int i;
@@ -89,15 +89,9 @@ void CreateTempJSObject(duk_context *ctx)
 class JSVM
 {
 public:
-    JSVM():ctx(0)
-    {
+    JSVM():ctx(0){ }
 
-    }
-
-    ~JSVM()
-    {
-
-    }
+    ~JSVM(){ }
 
     bool Start() {
         char *script_filename = "main.js";
@@ -110,10 +104,16 @@ public:
 
         int top = duk_get_top(ctx);
 
-        // 添加dukeape的require()功能所必须得readFile函数.
+
         duk_push_global_object(ctx);
-        duk_push_c_function(ctx, ReadFile, DUK_VARARGS);
-        duk_put_prop_string(ctx, -2, "readFile");
+        // 为实现dukeape的require()功能,require依赖Duktape.modSearch,而Duktape.modSearch中又使用了SyncReadFile.
+        // 所以必须实现SyncReadFile
+        duk_push_c_function(ctx, SyncReadFile, DUK_VARARGS);
+        duk_put_prop_string(ctx, -2, "SyncReadFile");
+        // 异步文件读取
+        duk_push_c_function(ctx, AsyncReadFile, DUK_VARARGS);
+        duk_put_prop_string(ctx, -2, "AsyncReadFile");
+
         duk_pop(ctx);  /* pop global */
 
         // 创建game
@@ -124,9 +124,6 @@ public:
         duk_open_OpenGL(ctx);
         // 注册GL渲染器
         duk_open_GLRenderer(ctx);
-
-        //Eval("print(GLRenderer.FLAG_FOO)");
-        //Eval("GLRenderer.Clear({'a':1.0, 'r':0.0,'g':0.333,'b':0.6666}, 1.0)");
 
         if (duk_peval_file(ctx, script_filename) != 0) {
             fprintf(stderr, "Error loading file '%s' : %s\n", script_filename, duk_safe_to_string(ctx, -1));
@@ -151,7 +148,39 @@ public:
                 return;
             }
             duk_pop(ctx);
-            //printf("duk_top=%d\n", duk_get_top(ctx));
+            if (duk_get_top(ctx) != 0) {
+                printf("duk_top=%d\n", duk_get_top(ctx));
+            }
+        }
+    }
+
+    void AsyncReadFileCallback(void* callback, unsigned buffLength, void* buffer)
+    {
+        if (callback)
+        {
+            int top = duk_get_top(ctx);
+
+            duk_push_heapptr(ctx, callback);
+            if (duk_is_callable(ctx, -1))
+            {
+                void *duk_buff = duk_push_fixed_buffer(ctx, buffLength);
+                memcpy(duk_buff, buffer, buffLength);
+                duk_push_buffer_object(ctx, 
+                                        -1 /*index of plain buffer*/,
+                                        0 /*byte offset*/,
+                                        buffLength /*byte (!) length */,
+                                        DUK_BUFOBJ_ARRAYBUFFER /*flags and type*/);
+
+                /* The plain buffer is now referenced by the buffer object
+	             * and doesn't need to be kept explicitly reachable.
+	             */
+                duk_remove(ctx, -2);
+
+                duk_pcall(ctx, 1);
+            }
+
+            duk_pop(ctx);
+            assert( duk_get_top(ctx) == top );
         }
     }
 
@@ -164,6 +193,194 @@ public:
     }
 
     duk_context *ctx;
+};
+
+class ReadFileThread : public WinThread
+{
+public:
+    ReadFileThread(WindowsSystem& system):_system(system) { }
+
+    virtual int     Run() {
+        if (_work.vaild)
+        {
+            WinFile* file = _system.CreateFile();
+            file->Open(_work.fileName.c_str(), "r+b");
+            _work.fileMemorySize = file->GetLength();
+            if (_work.fileMemory != 0){
+                SAFE_DELETE_ARRAY( _work.fileMemory );
+            }
+            _work.fileMemory = new char[_work.fileMemorySize];
+            file->Read(_work.fileMemory, _work.fileMemorySize);
+            _work.vaild = false;
+        }
+        
+        Suspend();
+        return 0;
+    }
+
+    struct Work
+    {
+        bool vaild;
+        uint32 id;
+        void* fileMemory;
+        uint32 fileMemorySize;
+        string fileName;
+        Work():vaild(0),id(0),fileMemory(0),fileMemorySize(0){}
+    };
+
+public:
+    Work _work;
+    WindowsSystem& _system;
+};
+
+class AsyncReadFileMgr
+{
+public:
+    AsyncReadFileMgr(ReadFileThread* thr, JSVM* jsvm):_id(0),_working(false),_thr(thr),_jsvm(jsvm) {}
+
+    struct ReadFileInfo
+    {
+        uint32 id;
+        void* callback;
+        bool acquire;
+        string fileName;
+
+        ReadFileInfo():id(0),callback(0),acquire(0) {}
+    };
+
+    void Add(const char* fileName, void* callback) {
+        int size = _infos.size();
+        _infos.resize(size + 1);
+        ReadFileInfo& info = _infos.back();
+        info.id = ++_id;
+        info.callback = callback;
+        info.fileName.assign(fileName);
+    }
+
+    void CheckWork() {
+        
+        if (_infos.empty())
+            return;
+        
+        ReadFileThread::Work& work = _thr->_work;
+        if(!work.vaild)
+        {
+            if (!work.fileName.empty())
+            {
+                for (auto it = _infos.begin(); it != _infos.end(); ++it)
+                {
+                    if(it->id == work.id)
+                    {
+                        // 异步文件回调.
+                        _jsvm->AsyncReadFileCallback(it->callback, work.fileMemorySize, work.fileMemory);
+                        // 设置
+                        _infos.erase(it);
+                        _working = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!_infos.empty() && !_working)
+        {
+            auto it = _infos.front();
+            work.vaild = true;
+            work.fileName = it.fileName;
+            work.id =it.id;
+
+            _thr->Resume();
+            _working = true;
+        }
+    }
+
+    uint32 _id;
+    bool _working;
+    ReadFileThread* _thr;
+    JSVM* _jsvm;
+    std::list<ReadFileInfo> _infos;
+    
+};
+
+AsyncReadFileMgr* _asyncReadFileMgr = 0;
+
+BOOL FindFirstFileExists(LPCTSTR lpPath, DWORD dwFilter)  
+{  
+    WIN32_FIND_DATA fd;  
+    HANDLE hFind = FindFirstFile(lpPath, &fd);  
+    BOOL bFilter = (FALSE == dwFilter) ? TRUE : fd.dwFileAttributes & dwFilter;  
+    BOOL RetValue = ((hFind != INVALID_HANDLE_VALUE) && bFilter) ? TRUE : FALSE;  
+    FindClose(hFind);  
+    return RetValue;  
+}  
+
+static duk_ret_t AsyncReadFile(duk_context *ctx) {
+
+    const char *fileName = duk_to_string(ctx, 0);
+
+    if (FindFirstFileExists(fileName, FALSE))
+    {
+        duk_bool_t b = duk_is_callable(ctx, 1);
+        if (b) {
+            void* callback = duk_get_heapptr(ctx, 1);
+            if (_asyncReadFileMgr)
+            {
+                _asyncReadFileMgr->Add(fileName, callback);
+            }
+        }
+    }
+    else
+    {
+        printf("%s async read fail because the file not exists.\n", fileName);
+    }
+
+
+    return 0;  /* one return value */
+}
+
+class KeyboardListener : public Window::IKeyboardListener, public Window::IMouseListener
+{
+public:
+    KeyboardListener(JSVM* jsvm = 0):_jsvm(jsvm) {}
+
+    virtual void OnKeyDown(Key::Scan scan) {
+        if (_jsvm) {
+            char cmd[64];
+            sprintf(cmd, "input.OnKeyDown(%d);", scan);
+            _jsvm->Eval(cmd);
+        }
+    };
+    virtual void OnKeyUp(Key::Scan scan) {
+        if (_jsvm) {
+            char cmd[64];
+            sprintf(cmd, "input.OnKeyUp(%d);", scan);
+            _jsvm->Eval(cmd);
+        }
+    };
+
+    virtual void OnMove(int x, int y) {
+        if (_jsvm) {
+            char cmd[64];
+            sprintf(cmd, "input.OnMouseMove(%d,%d);", x, y);
+            _jsvm->Eval(cmd);
+        }
+    }
+    virtual void OnButtonDown(int id, int x, int y) {
+        if (_jsvm) {
+            char cmd[64];
+            sprintf(cmd, "input.OnMouseDown(%d,%d,%d);", id, x, y);
+            _jsvm->Eval(cmd);
+        }
+    }
+    virtual void OnButtonUp(int id, int x, int y) {
+        if (_jsvm) {
+            char cmd[64];
+            sprintf(cmd, "input.OnMouseUp(%d,%d,%d);", id, x, y);
+            _jsvm->Eval(cmd);
+        }
+    }
+private:
+    JSVM* _jsvm;
 };
 
 int CALLBACK WinMain(
@@ -189,8 +406,17 @@ int CALLBACK WinMain(
     system.WindowAccelerateWithGLRender(window, &renderer);
 
     bool gameInit = false;
-    JSVM javm;
-    javm.Start();
+    JSVM jsvm;
+    jsvm.Start();
+
+    KeyboardListener listener(&jsvm);
+    window->_keyboardListener = &listener;
+    window->_mouseListener = &listener;
+
+    ReadFileThread thr(system);
+
+    AsyncReadFileMgr asyncReadFileMgr(&thr, &jsvm);
+    _asyncReadFileMgr = &asyncReadFileMgr;
 
     MSG msg;
     ZeroMemory (&msg, sizeof(msg));
@@ -204,17 +430,19 @@ int CALLBACK WinMain(
         else
         {
             if (gameInit == false) {
-                javm.Eval("game.onInit();");
+                jsvm.Eval("game.onInit();");
+                _asyncReadFileMgr->CheckWork();
                 gameInit = true;
             }else {
-                javm.Eval("game.onFrame(0);");
+                jsvm.Eval("game.onFrame(0);");
+                _asyncReadFileMgr->CheckWork();
             }
             Sleep(10);
         }
     }
 
-    javm.Eval("game.onShut();");
-    javm.End();
+    jsvm.Eval("game.onShut();");
+    jsvm.End();
     window->Destory();
     return 0;
 }

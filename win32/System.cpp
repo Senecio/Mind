@@ -1,4 +1,5 @@
 #include "System.h"
+#include <process.h>
 #include <gl/glew.h>
 #include <gl/wglew.h>
 #include "GLRenderer.h"
@@ -67,7 +68,7 @@ inline bool UTF8ToMB(std::string& outMB, const char* pUTF8, int lenUtf)
 
 #define szWindowClass "MindEngine:Window"
 
-Window::Window(WindowsSystem* system ):_system(system),_hwnd(0)
+Window::Window(WindowsSystem* system ):_system(system),_hwnd(0),_keyboardListener(0),_mouseListener(0)
 {
 
 }
@@ -101,6 +102,8 @@ bool Window::Create( const char* szTitle, uint32 x, uint32 y, uint32 width, uint
     ShowWindow(_hwnd, SW_SHOWDEFAULT);
     UpdateWindow(_hwnd);
 
+    SetWindowLong(_hwnd, GWL_USERDATA, (LONG)this);
+
     return true;
 }
 
@@ -131,11 +134,27 @@ ATOM Window::RegisterClass( HINSTANCE hInstance, const char* windowClass )
     return RegisterClassEx(&wcex);
 }
 
+Key::Scan Virtualkey2KeyScan(WPARAM wParam, LPARAM lParam)
+{
+    UINT scancode = 0;
+    if (HIWORD(lParam) & 0x0F00)
+    { 
+        scancode = MapVirtualKey(wParam, 0) | 0x80;
+    }
+    else
+    {
+        scancode = HIWORD(lParam) & 0x00FF;
+    }
+    return Key::Scan(scancode);
+}
+
 LRESULT CALLBACK Window::DefWndProc( HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam )
 {
     //int wmId, wmEvent;
     PAINTSTRUCT ps;
     HDC hdc;
+
+    Window *window = (Window*)GetWindowLong(hwnd, GWL_USERDATA);
 
     switch (message)
     {
@@ -143,6 +162,93 @@ LRESULT CALLBACK Window::DefWndProc( HWND hwnd, UINT message, WPARAM wParam, LPA
         hdc = BeginPaint(hwnd, &ps);
         // TODO: 在此添加任意绘图代码...
         EndPaint(hwnd, &ps);
+        break;
+    case WM_KEYDOWN:
+        {
+            if (window->_keyboardListener) {
+                Key::Scan scan = Virtualkey2KeyScan(wParam, lParam);
+                window->_keyboardListener->OnKeyDown(scan);
+            }
+        }
+        break;
+    case WM_KEYUP:
+        {
+            if (window->_keyboardListener) {
+                Key::Scan scan = Virtualkey2KeyScan(wParam, lParam);
+                window->_keyboardListener->OnKeyUp(scan);
+            }
+        }
+        break;
+    case WM_MOUSEMOVE:
+        {
+            int x_pos = LOWORD(lParam);
+            int y_pos = HIWORD(lParam);
+            if (window->_mouseListener)
+            {
+                window->_mouseListener->OnMove(x_pos, y_pos);
+            }
+            return 0;
+        }
+        break;
+    case WM_LBUTTONDOWN:
+        {
+            int x_pos = LOWORD(lParam);
+            int y_pos = HIWORD(lParam);
+            if (window->_mouseListener)
+            {
+                window->_mouseListener->OnButtonDown(MBID_LEFT, x_pos, y_pos);
+            }
+        }
+        break;
+    case WM_LBUTTONUP:
+        {
+            int x_pos = LOWORD(lParam);
+            int y_pos = HIWORD(lParam);
+            if (window->_mouseListener)
+            {
+                window->_mouseListener->OnButtonUp(MBID_LEFT, x_pos, y_pos);
+            }
+        }
+        break;
+    case WM_RBUTTONDOWN:
+        {
+            int x_pos = LOWORD(lParam);
+            int y_pos = HIWORD(lParam);
+            if (window->_mouseListener)
+            {
+                window->_mouseListener->OnButtonDown(MBID_RIGHT, x_pos, y_pos);
+            }
+        }
+        break;
+    case WM_RBUTTONUP:
+        {
+            int x_pos = LOWORD(lParam);
+            int y_pos = HIWORD(lParam);
+            if (window->_mouseListener)
+            {
+                window->_mouseListener->OnButtonUp(MBID_RIGHT, x_pos, y_pos);
+            }
+        }
+        break;
+    case WM_MBUTTONDOWN:
+        {
+            int x_pos = LOWORD(lParam);
+            int y_pos = HIWORD(lParam);
+            if (window->_mouseListener)
+            {
+                window->_mouseListener->OnButtonDown(MBID_MIDDLE, x_pos, y_pos);
+            }
+        }
+        break;
+    case WM_MBUTTONUP:
+        {
+            int x_pos = LOWORD(lParam);
+            int y_pos = HIWORD(lParam);
+            if (window->_mouseListener)
+            {
+                window->_mouseListener->OnButtonUp(MBID_MIDDLE, x_pos, y_pos);
+            }
+        }
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -263,6 +369,104 @@ bool WinFile::ReadLine( std::string& line )
 }
 
 
+inline uint32 __stdcall WinThread::ThreadFunction(void *pV)
+{
+    static int result = 0;
+    WinThread* pThis = (WinThread*)pV;
+
+    if (pThis)
+    {
+        try
+        {
+            while (::WaitForSingleObject(pThis->_closeEvent, pThis->_timeoutMillisTerminate) == WAIT_TIMEOUT)
+            {
+                result = pThis->Run();
+            }
+        }
+        catch(...)
+        {
+        }
+    }
+    return result;
+}
+
+WinThread::WinThread()
+{
+    unsigned int threadID = 0;
+
+    _handle = (HANDLE)::_beginthreadex(0, 0, ThreadFunction, (void*)this, CREATE_SUSPENDED, &threadID);
+
+    if (_handle == INVALID_HANDLE_VALUE)
+    {
+        ::MessageBox(0, "线程创建失败", "错误", MB_OK);
+    }
+
+    // 创建关闭事件句柄
+    _closeEvent = ::CreateEvent(NULL, false, false, NULL);		// "Close Thread"
+    if(_closeEvent == 0)
+    {
+        ::MessageBox(0, "线程关闭事件创建失败", "错误", MB_OK);
+    }
+
+    _timeoutMillisTerminate = 0;
+}
+
+WinThread::~WinThread()
+{
+    if (_handle != INVALID_HANDLE_VALUE)
+    {
+        if (::WaitForSingleObject (_handle, 0) == WAIT_TIMEOUT)
+        {
+            ::TerminateThread (_handle, 5);
+        }
+        ::CloseHandle(_handle);
+        _handle = INVALID_HANDLE_VALUE;
+    }
+
+    if (_closeEvent != INVALID_HANDLE_VALUE)
+    {
+        ::CloseHandle(_closeEvent);
+        _closeEvent = INVALID_HANDLE_VALUE;
+    }
+}
+
+DWORD WinThread::Resume()
+{
+    return ::ResumeThread(_handle);
+}
+
+DWORD WinThread::Suspend()
+{
+    return ::SuspendThread(_handle);
+}
+
+bool WinThread::Wait()
+{
+    return Wait((uint32)INFINITE);
+}
+
+bool WinThread::Wait(uint32 timeoutMillis)
+{
+    bool ok = false;
+    DWORD result = ::WaitForSingleObject(_handle, timeoutMillis);
+    if (result == WAIT_TIMEOUT)
+        ok = false;
+    else if (result == WAIT_OBJECT_0)
+        ok = true;
+    else
+    {
+
+    }
+    return ok;
+}
+
+void WinThread::Terminate(uint32 timeoutMillis)
+{
+    _timeoutMillisTerminate = timeoutMillis;
+    ::ResumeThread(_handle);
+    ::SetEvent(_closeEvent);
+}
+
 WindowsSystem::WindowsSystem(void)
 {
 
@@ -289,6 +493,7 @@ WinFile* WindowsSystem::CreateFile()
 void WindowsSystem::CloseFile(WinFile* file)
 {
     file->Close();
+    delete file;
 }
 
 bool WindowsSystem::WindowAccelerateWithGLRender( Window* window, class GLRenderer* renderer )
@@ -539,3 +744,5 @@ bool WindowsSystem::WindowAccelerateWithGLRender( Window* window, class GLRender
     renderer->SetHDC(hDC);
     return true;
 }
+
+

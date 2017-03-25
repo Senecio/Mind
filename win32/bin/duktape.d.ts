@@ -9,7 +9,8 @@
 
 // Duktape require isn't recognized as a function, but can be used as one
 declare function require(filename: string): any;
-declare function readFile(filename: string): string;
+declare function SyncReadFile(filename: string): string;
+declare function AsyncReadFile(filename: string, callback): string;
 declare interface DuktapeModule {
     modSearch(id: string, require, exports, module);
     Logger() : void;

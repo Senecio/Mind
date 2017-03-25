@@ -14,7 +14,16 @@ class GLVertexBuffer extends Mind.VertexBuffer {
     }
     
     SetData(data) {
-        this.data = data.slice();
+        if (typeof data.slice !== 'undefined') {
+            this.data = data.slice();
+        }
+        else if (typeof data.buffer !== 'undefined' && typeof data.buffer.slice !== 'undefined') {
+            this.data = data.buffer.slice();
+        }
+        else {
+            GameLog("~~~~~~~~~~~~~~error~~~~~~~~~~~~~");
+        }
+        
         let gl = this.gl;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vb);
         gl.bufferData(gl.ARRAY_BUFFER, this.data, this.GetUsage() === Mind.VertexBuffer.Usage.Dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
@@ -33,7 +42,16 @@ class GLIndexBuffer extends Mind.IndexBuffer {
     }
     
     SetData(data) {
-        this.data = data.slice();
+        if (typeof data.slice !== 'undefined') {
+            this.data = data.slice();
+        }
+        else if (typeof data.buffer !== 'undefined' && typeof data.buffer.slice !== 'undefined') {
+            this.data = data.buffer.slice();
+        }
+        else {
+            GameLog("~~~~~~~~~~~~~~error~~~~~~~~~~~~~");
+        }
+        
         let gl = this.gl;
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.ib);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.data, this.GetUsage() === Mind.IndexBuffer.Usage.Dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
@@ -97,7 +115,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -110,7 +128,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -124,7 +142,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -137,7 +155,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -150,7 +168,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -163,7 +181,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -176,7 +194,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -189,7 +207,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -202,7 +220,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -215,7 +233,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -228,7 +246,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -241,7 +259,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -254,7 +272,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -267,7 +285,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -280,7 +298,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -293,7 +311,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -306,7 +324,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -319,7 +337,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -332,7 +350,7 @@ class GLShader implements Mind.IShader {
         let gl = this.gl;
         let program = this.program;
         if (typeof this.locations[name] === 'undefined') {
-            this.locations[name] = { 'location' : gl.getAttribLocation(program, name) };
+            this.locations[name] = { 'location' : gl.getUniformLocation(program, name) };
         }
         
         if (this.locations[name].location !== -1) {
@@ -556,8 +574,10 @@ class GLRenderer implements Mind.IRenderer {
                     vaOffset += data[2];
                 }
             }
-        
+            
+            shader.OnBegin();
             gl.drawArrays(glPrimitive, offset, verticesCount);
+            shader.OnEnd();
         }
     }
     // 通过索引顶点缓存绘制图元
@@ -583,7 +603,6 @@ class GLRenderer implements Mind.IRenderer {
                 GameLog("not set shader.")
                 return;
             }
-            gl.useProgram((<GLShader>this.bindShader).program);
             
             let shader = (<GLShader>this.bindShader);
             gl.useProgram(shader.program);
@@ -605,7 +624,9 @@ class GLRenderer implements Mind.IRenderer {
                 }
             }
         
+            shader.OnBegin();
             gl.drawElements(glPrimitive, indicesCount, gl.UNSIGNED_SHORT, offset);
+            shader.OnEnd();
         }
     }
     
