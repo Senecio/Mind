@@ -1323,6 +1323,45 @@ duk_ret_t GL_prototype_DrawArrays(duk_context* ctx)
     return 0;
 }
 
+duk_ret_t GL_prototype_Enable(duk_context* ctx)
+{
+    int n = duk_get_top(ctx);  /* #args */
+    if (n != 1){
+        printf("%s %s\n",__FUNCTION__, ErrorSyntax);
+        return 0;
+    }
+    
+    unsigned int capability;
+    if (DukGetUIntFormStack(ctx, 0, capability))
+    {
+        GL_ASSERT( glEnable(capability) );
+    }
+    else
+    {
+        printf("%s %s\n",__FUNCTION__, ErrorParameter);
+        return 0;
+    }
+}
+
+duk_ret_t GL_prototype_Disable(duk_context* ctx)
+{
+    int n = duk_get_top(ctx);  /* #args */
+    if (n != 1){
+        printf("%s %s\n",__FUNCTION__, ErrorSyntax);
+        return 0;
+    }
+    
+    unsigned int capability;
+    if (DukGetUIntFormStack(ctx, 0, capability))
+    {
+        GL_ASSERT( glDisable(capability) );
+    }
+    else
+    {
+        printf("%s %s\n",__FUNCTION__, ErrorParameter);
+        return 0;
+    }
+}
 
 duk_ret_t GL_prototype_DrawElements(duk_context* ctx)
 {
@@ -1406,6 +1445,8 @@ duk_ret_t duk_open_OpenGL(duk_context *ctx)
         { "vertexAttribPointer", GL_prototype_VertexAttribPointer, 6},
         { "drawArrays", GL_prototype_DrawArrays, 3},
         { "drawElements", GL_prototype_DrawElements, 5},
+        { "enable" , GL_prototype_Enable, 1
+        { "disable" , GL_prototype_Disable, 1},
         { "flush", GL_prototype_Flush, 0},
         { NULL, NULL, 0 }
     };
@@ -1441,6 +1482,15 @@ duk_ret_t duk_open_OpenGL(duk_context *ctx)
         { "UNSIGNED_INT", (double) (GL_UNSIGNED_INT) },
         { "FLOAT", (double) (GL_FLOAT) },
         { "DOUBLE", (double) (GL_DOUBLE) },
+        { "DEPTH_TEST", (double) (GL_DEPTH_TEST) },
+        { "BLEND", (double) (GL_BLEND) },
+        { "CULL_FACE", (double) (GL_CULL_FACE) },
+        { "SCISSOR_TEST", (double) (GL_SCISSOR_TEST) },
+        { "STENCIL_TEST", (double) (GL_STENCIL_TEST) },
+        { "DITHER", (double) (GL_DITHER) },
+        { "SAMPLE_COVERAGE", (double) (GL_SAMPLE_COVERAGE) },
+        { "SAMPLE_ALPHA_TO_COVERAGE", (double) (GL_SAMPLE_ALPHA_TO_COVERAGE) },
+        { "POLYGON_OFFSET_FILL", (double) (GL_POLYGON_OFFSET_FILL) },
         { NULL, 0.0 }
     };
 
