@@ -60,7 +60,7 @@ export class Camera {
                 this._roll = a[0];
                 this._pitch = a[1];
                 this._head = a[2];
-                GameLog(this._roll, this._pitch, this._head);
+                //GameLog(this._roll, this._pitch, this._head);
             }
             
             let at = this._position.Add(this._forward);

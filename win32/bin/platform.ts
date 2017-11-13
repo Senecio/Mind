@@ -1,10 +1,10 @@
 /// <reference path="duktape.d.ts" />
 /// <reference path="GLRenderer.ts" />
-/// <reference path="..\..\engine\Camera.ts" />
-/// <reference path="..\..\engine\Input.ts" />
-/// <reference path="..\..\game\game.d.ts" />
-/// <reference path="..\..\game\binaryreader.ts" />
-/// <reference path="..\..\game\mdxParser.ts" />
+/// <reference path="../../engine/Camera.ts" />
+/// <reference path="../../engine/Input.ts" />
+/// <reference path="../../game/game.d.ts" />
+/// <reference path="../../game/binaryreader.ts" />
+/// <reference path="../../game/mdxParser.ts" />
 
 declare var game: Game;
 
