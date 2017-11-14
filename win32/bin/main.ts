@@ -189,11 +189,13 @@ game.onInit = function()
     Test2(this);
 }
 
+var clearColor = new Mind.Color(0, 0.141, 0.141, 1.0);
+
 game.onFrame = function()
 {
     UpdateCamera(this);
     
-    renderer.Clear(new Mind.Color(0, 0.141, 0.141, 1.0), 1.0);
+    renderer.Clear(clearColor, 1.0);
     
     Test1Draw(this);
     

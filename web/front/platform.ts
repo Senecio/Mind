@@ -46,7 +46,14 @@ var AsyncReadFile = function(file, callback) {
         return xhr;
     }
     
-    getRequest(file, true, function(event) { callback(event.target.response) }, null, null);
+    getRequest(file, true, function(event) { 
+        if (event.target.status === 200) {
+            callback(event.target.response);
+        }
+        else {
+            callback(null);
+        }
+    }, null,null);
 }
 
 declare var renderer: Mind.IRenderer;
