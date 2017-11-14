@@ -9,7 +9,7 @@
 declare var game: Game;
 
 var logger = new Duktape.Logger();  // or new Duktape.Logger('logger name')
-var GameLog = function(...optionalParams: any[]) {
+var GameLog = function (...optionalParams: any[]) {
     logger.info.apply(logger, optionalParams);
 }
 
@@ -31,4 +31,4 @@ var renderer = new GLRenderer();
 var input = new Mind.Input();
 declare var opengl: WebGLRenderingContext;
 
-declare var input : Mind.Input;
+declare var input: Mind.Input;

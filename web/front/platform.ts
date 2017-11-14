@@ -5,12 +5,12 @@
 /// <reference path="../../game/binaryreader.ts" />
 /// <reference path="../../game/mdxParser.ts" />
 
-var GameLog = function(...optionalParams: any[]) {
+var GameLog = function (...optionalParams: any[]) {
     console.log.apply(console, optionalParams);
 }
 
 
-var AsyncReadFile = function(file, callback) {
+var AsyncReadFile = function (file, callback) {
     /**
      * Sends an XHR2 request.
      *
@@ -42,27 +42,27 @@ var AsyncReadFile = function(file, callback) {
         }
 
         xhr.send();
-        
+
         return xhr;
     }
-    
-    getRequest(file, true, function(event) { 
+
+    getRequest(file, true, function (event) {
         if (event.target.status === 200) {
             callback(event.target.response);
         }
         else {
             callback(null);
         }
-    }, null,null);
+    }, null, null);
 }
 
 declare var renderer: Mind.IRenderer;
-declare var input : Mind.Input;
+declare var input: Mind.Input;
 
 class GameInst implements Game {
-    onInit() {}
-    onFrame(deltaTime:number) {}
-    onShut() {}
+    onInit() { }
+    onFrame(deltaTime: number) { }
+    onShut() { }
 }
 
 var game = new GameInst();
