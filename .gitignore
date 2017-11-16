@@ -3,4 +3,9 @@
 *.log
 !.gitignore
 node_modules/
-client/dist/
+win32/Debug/
+win32/duktape-1.6.0/
+win32/bin/
+win32/glew/
+engine/*.js
+game/*.js
